@@ -173,6 +173,7 @@ def test_rules_disabled_runs_everything_and_still_logs(monkeypatch):
     assert db.get_order(3)["refunded_amount"] == 5000
     assert audit("t1") == [("issue_refund", "allowed", None), ("issue_refund", "executed", None)]
 
+
 class FailingOnceModel(ScriptedModel):
     """Raises on the first call (like a rate-limited API), then follows the script."""
 
@@ -196,3 +197,35 @@ def test_crashed_run_is_not_stuck_waiting_for_approval():
     result = agent.run_turn(graph, "t1", "hello?")
     assert result == {"reply": "Hi again!", "status": "done", "actions": []}
 
+
+# --- one audit row per outcome per tool call ----------------------------------
+
+def test_each_tool_call_writes_exactly_one_allowed_and_one_executed_row():
+    lookup = {"name": "lookup_order", "args": {"order_id": 7}, "id": "c1"}
+    refund = {"name": "issue_refund", "args": {"order_id": 7, "amount": 150, "reason": "torn"}, "id": "c2"}
+    graph = make_graph([
+        AIMessage(content="", tool_calls=[lookup, refund]),  # two calls in one model turn
+        AIMessage(content="Refunded $150."),
+    ])
+    agent.run_turn(graph, "t1", "Refund $150 on order 7, it's torn")
+
+    assert audit("t1") == [
+        ("lookup_order", "allowed", None),
+        ("lookup_order", "executed", None),
+        ("issue_refund", "allowed", None),
+        ("issue_refund", "executed", None),
+    ]
+    assert db.get_order(7)["refunded_amount"] == 150
+
+
+def test_tool_that_returns_an_error_is_logged_as_failed_not_executed():
+    graph = make_graph([
+        tool_call("issue_refund", {"order_id": 7, "amount": 150, "reason": ""}),  # tool rejects: no reason
+        AIMessage(content="What's the reason for the refund?"),
+    ])
+    result = agent.run_turn(graph, "t1", "Refund $150 on order 7")
+
+    assert audit("t1") == [("issue_refund", "allowed", None), ("issue_refund", "failed", None)]
+    assert "A reason is required" in db.list_audit("t1")[0]["detail"]
+    assert result["actions"] == []  # nothing actually happened
+    assert db.get_order(7)["refunded_amount"] == 0

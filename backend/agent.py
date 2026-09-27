@@ -79,6 +79,12 @@ def run_tool(name, args):
         return {"error": str(e)}
 
 
+def run_outcome(output):
+    """Audit outcome after running a tool: "executed", or "failed" if the tool returned an error
+    (e.g. missing reason, unknown order). A failed call changed nothing."""
+    return "failed" if isinstance(output, dict) and "error" in output else "executed"
+
+
 def build_llm():
     """MODEL with tools bound. If FALLBACK_MODEL is set, it answers whenever MODEL errors (e.g. rate limit)."""
     tools = list(TOOLS.values())
@@ -122,8 +128,9 @@ def build_graph(model=None, checkpointer=None):
 
             if outcome == "allowed":
                 output = run_tool(name, args)
-                db.log_audit(agent_name, thread_id, order_id, name, args, "executed", None, str(output))
-                if name in TOOLS:
+                ran = run_outcome(output)
+                db.log_audit(agent_name, thread_id, order_id, name, args, ran, None, str(output))
+                if ran == "executed":
                     actions.append({"tool": name, "args": args})
                 content = str(output)
             elif outcome == "blocked":
@@ -160,8 +167,10 @@ def build_graph(model=None, checkpointer=None):
                         "pending_ticket": None}
 
             output = run_tool(tool, args)
-            db.log_audit(agent_name, thread_id, ticket["order_id"], tool, args, "executed", None, str(output))
-            actions.append({"tool": tool, "args": args})
+            ran = run_outcome(output)
+            db.log_audit(agent_name, thread_id, ticket["order_id"], tool, args, ran, None, str(output))
+            if ran == "executed":
+                actions.append({"tool": tool, "args": args})
             note = f"[Warden] A manager approved ticket #{ticket_id}. {tool} has now run: {output}"
         else:
             note = f"[Warden] A manager denied ticket #{ticket_id}. {tool} was NOT run."

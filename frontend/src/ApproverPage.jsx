@@ -22,11 +22,21 @@ function outcomeLabel(row) {
   return row.outcome
 }
 
-// Blocked rows red, approval rows amber, allowed/executed gray.
+// Blocked rows red, failed rows orange, approval rows amber, allowed/executed gray.
 function outcomeStyle(outcome) {
   if (outcome === 'blocked') return 'bg-red-50 text-red-700'
+  if (outcome === 'failed') return 'bg-orange-50 text-orange-700'
   if (['needs_approval', 'approved', 'denied'].includes(outcome)) return 'bg-amber-50 text-amber-800'
   return 'text-slate-500'
+}
+
+// Hover text: for a failed row, just the tool's error message (detail is "{'error': '...'}").
+function hoverText(row) {
+  if (row.outcome === 'failed') {
+    const match = (row.detail || '').match(/'error': ['"](.*)['"]\}$/)
+    return match ? `Error: ${match[1]}` : row.detail
+  }
+  return row.detail || ''
 }
 
 function timeOf(iso) {
@@ -277,7 +287,7 @@ function DetailsPopup({ id, busy, onClose, onDecide }) {
               <p className="mb-1.5 font-medium">What the agent did</p>
               <ol className="space-y-1">
                 {steps.map((row, i) => (
-                  <li key={row.id} className={`flex justify-between gap-3 rounded px-2 py-1 ${outcomeStyle(row.outcome)}`}>
+                  <li key={row.id} className={`flex justify-between gap-3 rounded px-2 py-1 ${outcomeStyle(row.outcome)}`} title={hoverText(row)}>
                     <span>
                       {i + 1}. {actionLabel(row)}
                     </span>
@@ -319,7 +329,7 @@ function Activity({ rows }) {
         </thead>
         <tbody className="divide-y divide-slate-100">
           {rows.map((row) => (
-            <tr key={row.id} className={outcomeStyle(row.outcome)} title={row.detail || ''}>
+            <tr key={row.id} className={outcomeStyle(row.outcome)} title={hoverText(row)}>
               <td className="whitespace-nowrap px-3 py-2 tabular-nums">{timeOf(row.time)}</td>
               <td className="whitespace-nowrap px-3 py-2">{row.agent_name}</td>
               <td className="whitespace-nowrap px-3 py-2 font-mono">{row.order_id ? `#${row.order_id}` : '—'}</td>

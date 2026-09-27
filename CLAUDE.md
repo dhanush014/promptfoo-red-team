@@ -78,7 +78,8 @@ tickets    id, thread_id, order_id, tool, args_json, amount,
 audit_log  id, time, agent_name, thread_id, order_id, tool,
            args_json, outcome, rule, detail
            outcome = allowed / blocked / needs_approval /
-                     approved / denied / executed
+                     approved / denied / executed / failed
+           (failed = tool ran but returned an error, nothing changed)
 outbox     id, time, to_email, subject, body   (fake email, never sent)
 ```
 

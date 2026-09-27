@@ -61,7 +61,7 @@ They run in that order, so a $5000 refund on a $120 order is blocked (R2) instea
 
 **Re-check on approval.** Data can change while a ticket waits (another refund on the same order, for example). When a ticket is approved, the harness re-runs the blocking checks (permission and R2) against current data. If they now fail, the tool doesn't run, the ticket becomes `blocked_on_approval`, and the agent is told why.
 
-**Audit log.** Every attempt is written to `audit_log` with the agent, conversation, order, tool, arguments, outcome, rule and detail. Outcomes are `allowed`, `blocked`, `needs_approval`, `approved`, `denied` and `executed` (the tool really ran).
+**Audit log.** Every attempt is written to `audit_log` with the agent, conversation, order, tool, arguments, outcome, rule and detail. Outcomes are `allowed`, `blocked`, `needs_approval`, `approved`, `denied`, `executed` (the tool ran and succeeded) and `failed` (the tool ran but returned an error, such as a missing reason, so nothing changed).
 
 ## Known limits
 
