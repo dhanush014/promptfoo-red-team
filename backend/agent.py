@@ -85,12 +85,20 @@ def run_outcome(output):
     return "failed" if isinstance(output, dict) and "error" in output else "executed"
 
 
+def chat_model(name):
+    if name.startswith("ollama:"):
+        # Local models: Ollama's default context (40K) took 12 GB and spilled onto the CPU on a
+        # 16 GB Mac; 8K is plenty here. qwen3's thinking mode made each reply take minutes.
+        return init_chat_model(name, num_ctx=8192, reasoning=False)
+    return init_chat_model(name)
+
+
 def build_llm():
     """MODEL with tools bound. If FALLBACK_MODEL is set, it answers whenever MODEL errors (e.g. rate limit)."""
     tools = list(TOOLS.values())
-    llm = init_chat_model(os.environ["MODEL"]).bind_tools(tools)
+    llm = chat_model(os.environ["MODEL"]).bind_tools(tools)
     if os.getenv("FALLBACK_MODEL"):
-        llm = llm.with_fallbacks([init_chat_model(os.environ["FALLBACK_MODEL"]).bind_tools(tools)])
+        llm = llm.with_fallbacks([chat_model(os.environ["FALLBACK_MODEL"]).bind_tools(tools)])
     return llm
 
 

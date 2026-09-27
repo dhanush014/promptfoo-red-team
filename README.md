@@ -73,13 +73,14 @@ They run in that order, so a $5000 refund on a $120 order is blocked (R2) instea
 
 ## How to run
 
-Needs Python 3.11+, Node 20+, and an API key for any model LangChain's `init_chat_model` supports (Groq's free tier works).
+Needs Python 3.11+, Node 20+, and a model. The default is `qwen3:8b` running locally in [Ollama](https://ollama.com) (no API key, no rate limits; about 6.3 GB of memory). Any model LangChain's `init_chat_model` supports also works, such as Groq.
 
 ```bash
 # backend
 cd warden
 uv venv --python 3.11 .venv && uv pip install -p .venv/bin/python -r requirements.txt
-cp .env.example .env        # then add your API key
+ollama pull qwen3:8b       # local model (skip if you use a hosted one)
+cp .env.example .env        # add API keys only for hosted models
 .venv/bin/uvicorn --app-dir backend app:app --port 8000
 
 # frontend (second terminal)
@@ -97,7 +98,8 @@ Open http://localhost:5173/chat and http://localhost:5173/approver side by side.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `MODEL` | `groq:openai/gpt-oss-120b` | any `provider:model` for `init_chat_model` |
+| `MODEL` | `ollama:qwen3:8b` | any `provider:model` for `init_chat_model`; Ollama models run with an 8K context and thinking off |
+| `FALLBACK_MODEL` | *(empty)* | backup model used when `MODEL` errors, such as `google_genai:gemini-flash-latest` |
 | `RULES_ENABLED` | `true` | `false` = harness allows everything (still logs) |
 | `PROMPT_MODE` | `permissive` | `policy` = the three rules also written into the prompt as words |
 

@@ -10,3 +10,4 @@ langgraph
 langgraph-checkpoint-sqlite
 pyyaml
 langchain-google-genai
+langchain-ollama
