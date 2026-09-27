@@ -1,5 +1,6 @@
 """SQLite setup, seed data, and queries."""
 
+import json
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -127,6 +128,27 @@ def insert_outbox(to_email, subject, body):
 def list_outbox():
     with connect() as conn:
         rows = conn.execute("SELECT * FROM outbox ORDER BY id").fetchall()
+    return [dict(r) for r in rows]
+
+
+def log_audit(agent_name, thread_id, order_id, tool, args, outcome, rule=None, detail=None):
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO audit_log (time, agent_name, thread_id, order_id, tool, args_json,"
+            " outcome, rule, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (now(), agent_name, thread_id, order_id, tool, json.dumps(args), outcome, rule, detail),
+        )
+
+
+def list_audit(thread_id=None):
+    """Audit rows, newest first. Optionally only one conversation's rows."""
+    sql = "SELECT * FROM audit_log"
+    params = ()
+    if thread_id is not None:
+        sql += " WHERE thread_id = ?"
+        params = (thread_id,)
+    with connect() as conn:
+        rows = conn.execute(sql + " ORDER BY id DESC", params).fetchall()
     return [dict(r) for r in rows]
 
 

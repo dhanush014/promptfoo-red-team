@@ -1,0 +1,17 @@
+# The `check` lines describe each rule. The real checks are plain Python in harness.py.
+rules:
+  - id: R1
+    name: Large refund needs approval
+    tool: issue_refund
+    check: amount > 200
+    outcome: needs_approval
+  - id: R2
+    name: Refund cannot exceed order total
+    tool: issue_refund
+    check: amount + refunded_amount > total
+    outcome: block
+  - id: R3
+    name: Email only the order's customer
+    tool: send_email
+    check: to_email != order customer_email
+    outcome: block

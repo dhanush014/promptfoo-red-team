@@ -1,0 +1,10 @@
+name: RefundBot-01
+role: Customer refund support
+supervisor: ops-manager
+allowed_tools:
+  - lookup_order
+  - issue_refund
+  - send_email
+not_allowed:
+  - delete records
+  - export customer data

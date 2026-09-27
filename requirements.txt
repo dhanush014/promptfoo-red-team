@@ -1,1 +1,11 @@
 pytest
+fastapi
+uvicorn
+httpx
+python-dotenv
+langchain
+langchain-groq
+langchain-anthropic
+langgraph
+langgraph-checkpoint-sqlite
+pyyaml
