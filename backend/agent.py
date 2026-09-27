@@ -79,13 +79,20 @@ def run_tool(name, args):
         return {"error": str(e)}
 
 
+def build_llm():
+    """MODEL with tools bound. If FALLBACK_MODEL is set, it answers whenever MODEL errors (e.g. rate limit)."""
+    tools = list(TOOLS.values())
+    llm = init_chat_model(os.environ["MODEL"]).bind_tools(tools)
+    if os.getenv("FALLBACK_MODEL"):
+        llm = llm.with_fallbacks([init_chat_model(os.environ["FALLBACK_MODEL"]).bind_tools(tools)])
+    return llm
+
+
 def build_graph(model=None, checkpointer=None):
-    if model is None:
-        model = init_chat_model(os.environ["MODEL"])
     if checkpointer is None:
         conn = sqlite3.connect(db.db_path(), check_same_thread=False)
         checkpointer = SqliteSaver(conn)
-    llm = model.bind_tools(list(TOOLS.values()))
+    llm = build_llm() if model is None else model.bind_tools(list(TOOLS.values()))
 
     def agent_node(state: State):
         response = llm.invoke([SystemMessage(system_prompt())] + state["messages"])

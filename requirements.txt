@@ -9,3 +9,4 @@ langchain-anthropic
 langgraph
 langgraph-checkpoint-sqlite
 pyyaml
+langchain-google-genai
