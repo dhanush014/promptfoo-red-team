@@ -185,8 +185,9 @@ def config_for(thread_id):
 
 
 def status_of(graph, thread_id):
-    # A paused run still has a next node to execute.
-    return "waiting_approval" if graph.get_state(config_for(thread_id)).next else "done"
+    # Only a run paused by interrupt() is waiting. A run that crashed (e.g. the model
+    # API failed) also has a pending next node, but a new message should retry it.
+    return "waiting_approval" if graph.get_state(config_for(thread_id)).interrupts else "done"
 
 
 def turn_result(graph, thread_id, result):

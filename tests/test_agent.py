@@ -172,3 +172,27 @@ def test_rules_disabled_runs_everything_and_still_logs(monkeypatch):
     assert len(result["actions"]) == 1
     assert db.get_order(3)["refunded_amount"] == 5000
     assert audit("t1") == [("issue_refund", "allowed", None), ("issue_refund", "executed", None)]
+
+class FailingOnceModel(ScriptedModel):
+    """Raises on the first call (like a rate-limited API), then follows the script."""
+
+    def invoke(self, messages):
+        if not getattr(self, "failed", False):
+            self.failed = True
+            raise RuntimeError("429 rate limit")
+        return super().invoke(messages)
+
+
+def test_crashed_run_is_not_stuck_waiting_for_approval():
+    conn = sqlite3.connect(db.db_path(), check_same_thread=False)
+    graph = agent.build_graph(model=FailingOnceModel([AIMessage(content="Hi again!")]),
+                              checkpointer=SqliteSaver(conn))
+    try:
+        agent.run_turn(graph, "t1", "hello")
+    except RuntimeError:
+        pass
+
+    assert agent.status_of(graph, "t1") == "done"
+    result = agent.run_turn(graph, "t1", "hello?")
+    assert result == {"reply": "Hi again!", "status": "done", "actions": []}
+
