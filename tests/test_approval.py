@@ -212,3 +212,22 @@ def test_approval_rechecks_r2_with_current_data(monkeypatch):
     import app
     notice = app.graph.get_state(agent.config_for("t1")).values["messages"][-2]
     assert "blocked when re-checked by R2" in notice.content
+
+
+def test_ticket_detail_has_rule_name(paused):
+    client, ticket = paused
+    assert client.get(f"/tickets/{ticket['id']}").json()["rule_name"] == "Large refund needs approval"
+
+
+def test_demo_reset_wipes_and_reseeds(paused):
+    client, ticket = paused
+    client.post(f"/tickets/{ticket['id']}/approve")
+    assert db.get_order(4)["refunded_amount"] == 300
+
+    assert client.post("/demo/reset").json() == {"ok": True}
+
+    assert db.get_order(4)["refunded_amount"] == 0
+    assert len(db.list_orders()) == 10
+    assert client.get("/tickets").json() == []
+    assert client.get("/audit").json() == []
+    assert client.get("/chat/t1").json() == {"thread_id": "t1", "messages": [], "status": "done"}

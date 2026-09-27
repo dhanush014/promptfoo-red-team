@@ -224,7 +224,7 @@ Activity tab:
 - [x] 2. Agent with tools, no rules, POST /chat
 - [x] 3. agent.yaml + rules.yaml + harness checks + audit log
 - [x] 4. Approval pause/resume + tickets API
-- [ ] 5. Both frontend pages
+- [x] 5. Both frontend pages
 - [ ] 6. Attack test file + README with before/after numbers
 
 ## Working rules for Claude Code

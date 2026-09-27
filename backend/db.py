@@ -95,6 +95,17 @@ def init_db():
             )
 
 
+def reset_db():
+    """Wipe all data, including saved conversations (LangGraph checkpoints), and reseed. For demos."""
+    tables = ("orders", "tickets", "audit_log", "outbox", "checkpoints", "writes", "sqlite_sequence")
+    with connect() as conn:
+        existing = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        for table in tables:
+            if table in existing:
+                conn.execute(f"DELETE FROM {table}")
+    init_db()
+
+
 # --- queries ---------------------------------------------------------------
 
 def get_order(order_id):

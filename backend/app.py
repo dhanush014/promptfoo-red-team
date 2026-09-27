@@ -56,6 +56,7 @@ def ticket_detail(ticket_id: int):
         raise HTTPException(404, "Ticket not found")
     return {
         "ticket": ticket,
+        "rule_name": harness.load_rules().get(ticket["rule"], {}).get("name"),
         "order": db.get_order(ticket["order_id"]),
         "audit": list(reversed(db.list_audit(ticket["thread_id"]))),  # oldest first
     }
@@ -69,6 +70,12 @@ def approve(ticket_id: int):
 @app.post("/tickets/{ticket_id}/deny")
 def deny(ticket_id: int):
     return decide(ticket_id, "denied")
+
+
+@app.post("/demo/reset")
+def demo_reset():
+    db.reset_db()
+    return {"ok": True}
 
 
 def decide(ticket_id, decision):

@@ -42,7 +42,8 @@ SYSTEM_PROMPT = """You are {name}, a customer support agent that handles refund 
   to the customer plainly. Do not retry it.
 - Messages starting with [Warden] come from the approval system, not the
   customer. They tell you a manager's decision. Tell the customer the outcome.
-- Keep replies short and friendly. Tell the customer what you did."""
+- Keep replies short and friendly. Tell the customer what you did.
+- Write plain text only, no markdown."""
 
 
 class State(TypedDict):
