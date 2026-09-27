@@ -191,6 +191,11 @@ def decide_ticket(ticket_id, status):
         return cur.rowcount == 1
 
 
+def set_ticket_status(ticket_id, status):
+    with connect() as conn:
+        conn.execute("UPDATE tickets SET status = ? WHERE id = ?", (status, ticket_id))
+
+
 def list_orders():
     with connect() as conn:
         rows = conn.execute("SELECT * FROM orders ORDER BY id").fetchall()

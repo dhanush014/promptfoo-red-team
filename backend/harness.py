@@ -72,11 +72,14 @@ def decision(outcome, rule, detail):
     return {"outcome": outcome, "rule": rule, "detail": detail}
 
 
-def check(tool, args, order_id=None):
+def check(tool, args, order_id=None, blocking_only=False):
     """Decide whether the agent may run `tool` with `args`.
 
     order_id is the order this conversation is about. send_email has no
     order_id argument, so R3 checks the recipient against this order.
+
+    blocking_only=True skips needs_approval rules (R1). Used when a ticket is
+    approved, to re-check permission and R2 against current data before running.
     """
     if not rules_enabled():
         return decision("allowed", None, "rules disabled")
@@ -90,6 +93,8 @@ def check(tool, args, order_id=None):
     for rule_id, rule_hit in CHECKS.items():
         rule = rules[rule_id]
         if rule["tool"] != tool:
+            continue
+        if blocking_only and rule["outcome"] != "block":
             continue
         reason = rule_hit(args, order)
         if reason:

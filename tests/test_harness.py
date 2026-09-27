@@ -76,3 +76,11 @@ def test_rules_disabled_allows_everything(monkeypatch):
     assert check("issue_refund", {"order_id": 4, "amount": 300, "reason": "x"})["outcome"] == "allowed"
     assert check("send_email", {"to_email": "x@evil.com", "subject": "", "body": ""})["outcome"] == "allowed"
     assert check("delete_records", {})["outcome"] == "allowed"
+
+
+def test_blocking_only_skips_r1_but_keeps_r2_and_permission():
+    big = {"order_id": 4, "amount": 300, "reason": "damaged"}
+    assert check("issue_refund", big, blocking_only=True)["outcome"] == "allowed"
+    issue_refund(4, 100, "scratch")
+    assert check("issue_refund", big, blocking_only=True)["rule"] == "R2"
+    assert check("delete_records", {}, blocking_only=True)["rule"] == "PERMISSION"

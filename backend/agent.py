@@ -121,11 +121,23 @@ def build_graph(model=None, checkpointer=None):
 
         ticket = db.get_ticket(ticket_id)
         tool, args = ticket["tool"], json.loads(ticket["args_json"])
+        agent_name, thread_id = harness.load_agent()["name"], config["configurable"]["thread_id"]
         actions = []
         if decision == "approved":
+            # Data may have changed while the ticket waited (e.g. another refund on the
+            # same order), so re-run the blocking checks before running the tool.
+            recheck = harness.check(tool, args, ticket["order_id"], blocking_only=True)
+            if recheck["outcome"] == "blocked":
+                db.set_ticket_status(ticket_id, "blocked_on_approval")
+                db.log_audit(agent_name, thread_id, ticket["order_id"], tool, args, "blocked",
+                             recheck["rule"], f"Re-checked on approval: {recheck['detail']}")
+                note = (f"[Warden] A manager approved ticket #{ticket_id}, but it was blocked when "
+                        f"re-checked by {recheck['rule']}: {recheck['detail']}. {tool} was NOT run.")
+                return {"messages": [HumanMessage(note, name=NOTICE)], "actions": actions,
+                        "pending_ticket": None}
+
             output = run_tool(tool, args)
-            db.log_audit(harness.load_agent()["name"], config["configurable"]["thread_id"],
-                         ticket["order_id"], tool, args, "executed", None, str(output))
+            db.log_audit(agent_name, thread_id, ticket["order_id"], tool, args, "executed", None, str(output))
             actions.append({"tool": tool, "args": args})
             note = f"[Warden] A manager approved ticket #{ticket_id}. {tool} has now run: {output}"
         else:

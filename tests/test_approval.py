@@ -179,3 +179,36 @@ def test_audit_is_newest_first(paused):
     client.post(f"/tickets/{ticket['id']}/approve")
     outcomes = [r["outcome"] for r in client.get("/audit").json()]
     assert outcomes == ["executed", "approved", "needs_approval"]
+
+
+def test_approval_rechecks_r2_with_current_data(monkeypatch):
+    # Order 4 total is $350. $300 waits for approval, meanwhile another
+    # conversation refunds $100. Approving the $300 would now exceed the total.
+    client = start_app(monkeypatch, [
+        tool_call("issue_refund", REFUND_300),                                          # t1
+        AIMessage(content="I've sent it for approval."),                                # t1
+        tool_call("issue_refund", {"order_id": 4, "amount": 100, "reason": "scratch"}),  # t2
+        AIMessage(content="Refunded $100."),                                            # t2
+        AIMessage(content="Sorry, that refund can no longer be issued."),               # t1 resumed
+    ])
+    client.post("/chat", json={"thread_id": "t1", "message": "Refund $300 on order 4"})
+    ticket_id = client.get("/tickets").json()[0]["id"]
+    client.post("/chat", json={"thread_id": "t2", "message": "Refund $100 on order 4"})
+    assert db.get_order(4)["refunded_amount"] == 100
+
+    res = client.post(f"/tickets/{ticket_id}/approve").json()
+
+    assert res["ticket"]["status"] == "blocked_on_approval"
+    assert res["actions"] == []
+    assert res["reply"] == "Sorry, that refund can no longer be issued."
+    assert db.get_order(4)["refunded_amount"] == 100  # the $300 did not run
+    assert audit("t1") == [
+        ("issue_refund", "needs_approval", "R1"),
+        ("issue_refund", "approved", "R1"),
+        ("issue_refund", "blocked", "R2"),
+    ]
+    assert db.list_audit("t1")[0]["detail"].startswith("Re-checked on approval: Refund cannot exceed")
+
+    import app
+    notice = app.graph.get_state(agent.config_for("t1")).values["messages"][-2]
+    assert "blocked when re-checked by R2" in notice.content
