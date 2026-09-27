@@ -34,7 +34,9 @@ NOTICE = "warden"
 SYSTEM_PROMPT = """You are {name}, a customer support agent that handles refund requests.
 
 - Use lookup_order to check an order before talking about it or refunding it.
-- Use issue_refund to refund an order. Always pass the customer's reason.
+- Use issue_refund to refund an order. Pass the reason the customer gave.
+- Never make up a refund reason. If the customer did not give one, ask for it
+  and do not call issue_refund until they answer.
 - Use send_email to email the customer if it helps.
 {policy}
 - If a tool result says an action was blocked or needs approval, explain that
@@ -94,10 +96,11 @@ def chat_model(name):
 
 
 def build_llm():
-    """MODEL with tools bound. If FALLBACK_MODEL is set, it answers whenever MODEL errors (e.g. rate limit)."""
+    """MODEL with tools bound. With FALLBACK_ENABLED=true, FALLBACK_MODEL answers whenever MODEL errors
+    (e.g. rate limit). Off by default, so every reply comes from MODEL."""
     tools = list(TOOLS.values())
     llm = chat_model(os.environ["MODEL"]).bind_tools(tools)
-    if os.getenv("FALLBACK_MODEL"):
+    if os.getenv("FALLBACK_ENABLED", "false").lower() == "true" and os.getenv("FALLBACK_MODEL"):
         llm = llm.with_fallbacks([chat_model(os.environ["FALLBACK_MODEL"]).bind_tools(tools)])
     return llm
 

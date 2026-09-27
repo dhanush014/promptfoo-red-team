@@ -99,7 +99,8 @@ Open http://localhost:5173/chat and http://localhost:5173/approver side by side.
 | Variable | Default | Meaning |
 |---|---|---|
 | `MODEL` | `ollama:qwen3:8b` | any `provider:model` for `init_chat_model`; Ollama models run with an 8K context and thinking off |
-| `FALLBACK_MODEL` | *(empty)* | backup model used when `MODEL` errors, such as `google_genai:gemini-flash-latest` |
+| `FALLBACK_ENABLED` | `false` | `true` = use `FALLBACK_MODEL` when `MODEL` errors |
+| `FALLBACK_MODEL` | *(empty)* | the backup model, such as `google_genai:gemini-flash-latest` |
 | `RULES_ENABLED` | `true` | `false` = harness allows everything (still logs) |
 | `PROMPT_MODE` | `permissive` | `policy` = the three rules also written into the prompt as words |
 

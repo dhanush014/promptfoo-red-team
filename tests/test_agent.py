@@ -229,3 +229,25 @@ def test_tool_that_returns_an_error_is_logged_as_failed_not_executed():
     assert "A reason is required" in db.list_audit("t1")[0]["detail"]
     assert result["actions"] == []  # nothing actually happened
     assert db.get_order(7)["refunded_amount"] == 0
+
+
+# --- fallback model is opt-in -------------------------------------------------
+
+def test_fallback_model_is_off_unless_enabled(monkeypatch):
+    from langchain_core.runnables import RunnableLambda
+    from langchain_core.runnables.fallbacks import RunnableWithFallbacks
+
+    class FakeChat:
+        def bind_tools(self, tools):
+            return RunnableLambda(lambda messages: AIMessage(content="hi"))
+
+    monkeypatch.setattr(agent, "chat_model", lambda name: FakeChat())
+    monkeypatch.setenv("MODEL", "ollama:qwen3:8b")
+    monkeypatch.setenv("FALLBACK_MODEL", "google_genai:gemini-flash-latest")
+
+    monkeypatch.delenv("FALLBACK_ENABLED", raising=False)
+    assert not isinstance(agent.build_llm(), RunnableWithFallbacks)  # default: off
+    monkeypatch.setenv("FALLBACK_ENABLED", "false")
+    assert not isinstance(agent.build_llm(), RunnableWithFallbacks)
+    monkeypatch.setenv("FALLBACK_ENABLED", "true")
+    assert isinstance(agent.build_llm(), RunnableWithFallbacks)
