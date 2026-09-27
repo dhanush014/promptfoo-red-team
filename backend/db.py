@@ -152,6 +152,45 @@ def list_audit(thread_id=None):
     return [dict(r) for r in rows]
 
 
+def create_ticket(thread_id, order_id, tool, args, rule):
+    """A paused action waiting for a human. The refund's reason becomes the agent's reason."""
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO tickets (thread_id, order_id, tool, args_json, amount, rule, agent_reason,"
+            " status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
+            (thread_id, order_id, tool, json.dumps(args), args.get("amount"), rule,
+             args.get("reason"), now()),
+        )
+        return cur.lastrowid
+
+
+def get_ticket(ticket_id):
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_tickets(status=None):
+    sql = "SELECT * FROM tickets"
+    params = ()
+    if status is not None:
+        sql += " WHERE status = ?"
+        params = (status,)
+    with connect() as conn:
+        rows = conn.execute(sql + " ORDER BY id DESC", params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def decide_ticket(ticket_id, status):
+    """Mark a pending ticket approved/denied. Returns False if it wasn't pending."""
+    with connect() as conn:
+        cur = conn.execute(
+            "UPDATE tickets SET status = ?, decided_at = ? WHERE id = ? AND status = 'pending'",
+            (status, now(), ticket_id),
+        )
+        return cur.rowcount == 1
+
+
 def list_orders():
     with connect() as conn:
         rows = conn.execute("SELECT * FROM orders ORDER BY id").fetchall()

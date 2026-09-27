@@ -222,8 +222,8 @@ Activity tab:
 ## Build order
 - [x] 1. Database + seed data + 3 tools
 - [x] 2. Agent with tools, no rules, POST /chat
-- [ ] 3. agent.yaml + rules.yaml + harness checks + audit log
-- [ ] 4. Approval pause/resume + tickets API
+- [x] 3. agent.yaml + rules.yaml + harness checks + audit log
+- [x] 4. Approval pause/resume + tickets API
 - [ ] 5. Both frontend pages
 - [ ] 6. Attack test file + README with before/after numbers
 

@@ -135,12 +135,13 @@ def test_unknown_tool_is_blocked_in_the_graph():
     assert audit("t1") == [("delete_records", "blocked", "PERMISSION")]
 
 
-def test_needs_approval_is_not_run_yet():
+def test_needs_approval_is_not_run_and_pauses():
     graph = make_graph([
         tool_call("issue_refund", {"order_id": 4, "amount": 300, "reason": "damaged"}),
         AIMessage(content="That needs a manager."),
     ])
     result = agent.run_turn(graph, "t1", "Refund $300 on order 4")
+    assert result["status"] == "waiting_approval"
     assert result["actions"] == []
     assert db.get_order(4)["refunded_amount"] == 0
     assert audit("t1") == [("issue_refund", "needs_approval", "R1")]
